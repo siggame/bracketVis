@@ -50,6 +50,24 @@ class BracketViewer
         bracket3 = {lastmatch: null, matches: {}}
         champBracket = {lastmatch: null, matches: {}}
       
+        for id, match of @tourneyData
+            if !match.subsequent_matches?
+                match.subsequent_matches = []
+            if match.previous_matches.length > 0
+                prevMatch1id = match.previous_matches[0].toString()
+                prevMatch2id = match.previous_matches[1].toString()
+                prevMatch1 = @tourneyData[prevMatch1id]
+                prevMatch2 = @tourneyData[prevMatch2id]
+                
+                if !prevMatch1.subsequent_matches?
+                    prevMatch1.subsequent_matches = []
+                
+                if !prevMatch2.subsequent_matches?
+                    prevMatch2.subsequent_matches = []
+                    
+                prevMatch1.subsequent_matches.push id
+                prevMatch2.subsequent_matches.push id
+      
         tier = {}
         for id, match of @tourneyData
             if match.previous_matches.length == 0

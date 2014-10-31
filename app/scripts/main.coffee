@@ -40,6 +40,10 @@ class BracketViewer
     constructor: () ->
         @canvas = document.getElementById "tourneyViewer"
         @tourneyData = (null)
+        @bracket1 = new Bracket
+        @bracket2 = new Bracket
+        @bracket3 = new Bracket
+        @champBracket = new Bracket
         
         try
             @context = @canvas.getContext "2d"
@@ -82,11 +86,6 @@ class BracketViewer
         reader.readAsText file
     
     createBrackets: () ->
-        bracket1 = new Bracket
-        bracket2 = new Bracket
-        bracket3 = new Bracket
-        champBracket = new Bracket
-      
         ###
          # Add list of subsequent games to each match. Also add an 
          # attribute player_slots and add the number of PlayerSlot objects 
@@ -125,7 +124,7 @@ class BracketViewer
         tier = {}
         for id, match of @tourneyData
             if match.previous_matches.length == 0
-                bracket1.matches[id] = match
+                @bracket1.matches[id] = match
                 tier[id] = match
         
         ###
@@ -149,7 +148,7 @@ class BracketViewer
                         (prevMatch2id == tierid and
                         (match.player_1 == tiermatch.winner or
                         match.player_2 == tiermatch.winner)))
-                            bracket1.matches[id] = match
+                            @bracket1.matches[id] = match
                             newtier[id] = match
             tier = newtier
             newtier = {}
@@ -159,7 +158,7 @@ class BracketViewer
          # tier array just initialize it as the last match of the bracket.
         ###
         for id, match of tier
-            bracket1.lastmatch = id
+            @bracket1.lastmatch = id
         
         ###
          # Now start building the second bracket. To do this, we first find
@@ -184,15 +183,15 @@ class BracketViewer
                     loser2 = prevMatch2.player_1           
                     
                 matchHasTwoLosersFromBrack1 = 
-                (bracket1.matches[prevMatch1id]? and
+                (@bracket1.matches[prevMatch1id]? and
                 (match.player_1 == loser1 or
                 match.player_2 == loser1)) and
-                (bracket1.matches[prevMatch2id]? and
+                (@bracket1.matches[prevMatch2id]? and
                 (match.player_1 == loser2 or
                 match.player_2 == loser2))
                     
                 if (matchHasTwoLosersFromBrack1)
-                    bracket2.matches[id] = match
+                    @bracket2.matches[id] = match
         
         ###
          # Then we fill out the rest of bracket two. Here you will insert all
@@ -206,7 +205,7 @@ class BracketViewer
         while insertionMade
             insertionMade = (false)
             for id, match of @tourneyData
-                if match.previous_matches.length > 0 and !bracket2.matches[id]?
+                if match.previous_matches.length > 0 and !@bracket2.matches[id]?
                     prevMatch1id = match.previous_matches[0].toString()
                     prevMatch2id = match.previous_matches[1].toString()
                     prevMatch1 = @tourneyData[prevMatch1id]
@@ -223,33 +222,33 @@ class BracketViewer
                         loser2 = prevMatch2.player_1           
                         
                     matchHasLoserFromBrack1 = 
-                    (bracket1.matches[prevMatch1id]? and
+                    (@bracket1.matches[prevMatch1id]? and
                     (match.player_1 == loser1 or
                     match.player_2 == loser1)) or
-                    (bracket1.matches[prevMatch2id]? and
+                    (@bracket1.matches[prevMatch2id]? and
                     (match.player_1 == loser2 or
                     match.player_2 == loser2))
                     
                     matchHasWinnerFromBrack2 = 
-                    (bracket2.matches[prevMatch1id]? and
+                    (@bracket2.matches[prevMatch1id]? and
                     (match.player_1 == prevMatch1.winner or
                     match.player_2 == prevMatch1.winner)) or
-                    (bracket2.matches[prevMatch2id]? and
+                    (@bracket2.matches[prevMatch2id]? and
                     (match.player_1 == prevMatch2.winner or
                     match.player_2 == prevMatch2.winner))
                     
                     matchHasTwoWinnersFromBrack2 = 
-                    (bracket2.matches[prevMatch1id]? and
+                    (@bracket2.matches[prevMatch1id]? and
                     (match.player_1 == prevMatch1.winner or
                     match.player_2 == prevMatch1.winner)) and
-                    (bracket2.matches[prevMatch2id]? and
+                    (@bracket2.matches[prevMatch2id]? and
                     (match.player_1 == prevMatch2.winner or
                     match.player_2 == prevMatch2.winner))
                     
                     if matchHasLoserFromBrack1 and matchHasWinnerFromBrack2 or
                     matchHasTwoWinnersFromBrack2
                         insertionMade = (true)
-                        bracket2.matches[id] = match
+                        @bracket2.matches[id] = match
 
         ###
          # Here we find the last match in bracket 2. This can be found by
@@ -259,7 +258,7 @@ class BracketViewer
          # until I can't either subsequent matches in this bracket, 
          # and that will be the top of tier 2.
         ### 
-        for id, match of bracket2.matches
+        for id, match of @bracket2.matches
             nextId = id
             nextMatch = match
             
@@ -268,12 +267,12 @@ class BracketViewer
             subMatch1 = match
             subMatch2 = match
             
-            while bracket2.matches[subMatch1id]? or
-            bracket2.matches[subMatch2id]?
-                if bracket2.matches[subMatch1id]?
+            while @bracket2.matches[subMatch1id]? or
+            @bracket2.matches[subMatch2id]?
+                if @bracket2.matches[subMatch1id]?
                     nextId = subMatch1id
                     nextMatch = subMatch1
-                else if bracket2.matches[subMatch2id]?
+                else if @bracket2.matches[subMatch2id]?
                     nextId = subMatch2id
                     nextMatch = subMatch2
                 else
@@ -284,7 +283,7 @@ class BracketViewer
                 subMatch1 = @tourneyData[subMatch1id]
                 subMatch2 = @tourneyData[subMatch2id]
             
-            bracket2.lastmatch = nextId
+            @bracket2.lastmatch = nextId
             break
         
         ###
@@ -309,15 +308,15 @@ class BracketViewer
                     loser2 = prevMatch2.player_1           
                     
                 matchHasTwoLosersFromBrack2 = 
-                (bracket2.matches[prevMatch1id]? and
+                (@bracket2.matches[prevMatch1id]? and
                 (match.player_1 == loser1 or
                 match.player_2 == loser1)) and
-                (bracket2.matches[prevMatch2id]? and
+                (@bracket2.matches[prevMatch2id]? and
                 (match.player_1 == loser2 or
                 match.player_2 == loser2))
                     
                 if (matchHasTwoLosersFromBrack2)
-                    bracket3.matches[id] = match
+                    @bracket3.matches[id] = match
         
         ###
          # The we find all the games that have a loser from bracket 2 and
@@ -328,7 +327,7 @@ class BracketViewer
         while insertionMade
             insertionMade = (false)
             for id, match of @tourneyData
-                if match.previous_matches.length > 0 and !bracket3.matches[id]?
+                if match.previous_matches.length > 0 and !@bracket3.matches[id]?
                     prevMatch1id = match.previous_matches[0].toString()
                     prevMatch2id = match.previous_matches[1].toString()
                     prevMatch1 = @tourneyData[prevMatch1id]
@@ -345,38 +344,38 @@ class BracketViewer
                         loser2 = prevMatch2.player_1           
                         
                     matchHasLoserFromBrack2 = 
-                    (bracket2.matches[prevMatch1id]? and
+                    (@bracket2.matches[prevMatch1id]? and
                     (match.player_1 == loser1 or
                     match.player_2 == loser1)) or
-                    (bracket2.matches[prevMatch2id]? and
+                    (@bracket2.matches[prevMatch2id]? and
                     (match.player_1 == loser2 or
                     match.player_2 == loser2))
                     
                     matchHasWinnerFromBrack3 = 
-                    (bracket3.matches[prevMatch1id]? and
+                    (@bracket3.matches[prevMatch1id]? and
                     (match.player_1 == prevMatch1.winner or
                     match.player_2 == prevMatch1.winner)) or
-                    (bracket3.matches[prevMatch2id]? and
+                    (@bracket3.matches[prevMatch2id]? and
                     (match.player_1 == prevMatch2.winner or
                     match.player_2 == prevMatch2.winner))
                     
                     matchHasTwoWinnersFromBrack3 = 
-                    (bracket3.matches[prevMatch1id]? and
+                    (@bracket3.matches[prevMatch1id]? and
                     (match.player_1 == prevMatch1.winner or
                     match.player_2 == prevMatch1.winner)) and
-                    (bracket3.matches[prevMatch2id]? and
+                    (@bracket3.matches[prevMatch2id]? and
                     (match.player_1 == prevMatch2.winner or
                     match.player_2 == prevMatch2.winner))
                     
                     if matchHasLoserFromBrack2 and matchHasWinnerFromBrack3 or
                     matchHasTwoWinnersFromBrack3
                         insertionMade = (true)
-                        bracket3.matches[id] = match
+                        @bracket3.matches[id] = match
         
         ###
          # We find the last match in bracket3 just as we found it in bracket2
         ### 
-        for id, match of bracket3.matches
+        for id, match of @bracket3.matches
             nextId = id
             nextMatch = match
             
@@ -385,12 +384,12 @@ class BracketViewer
             subMatch1 = match
             subMatch2 = match
             
-            while bracket3.matches[subMatch1id]? or
-            bracket3.matches[subMatch2id]?
-                if bracket3.matches[subMatch1id]?
+            while @bracket3.matches[subMatch1id]? or
+            @bracket3.matches[subMatch2id]?
+                if @bracket3.matches[subMatch1id]?
                     nextId = subMatch1id
                     nextMatch = subMatch1
-                else if bracket3.matches[subMatch2id]?
+                else if @bracket3.matches[subMatch2id]?
                     nextId = subMatch2id
                     nextMatch = subMatch2
                 else
@@ -405,7 +404,7 @@ class BracketViewer
                     subMatch2id = subMatch1id
                     subMatch2 = subMatch1
             
-            bracket3.lastmatch = nextId
+            @bracket3.lastmatch = nextId
             break
         
         ###
@@ -413,19 +412,19 @@ class BracketViewer
          # the championship games
         ###
         for id, match of @tourneyData
-            if !bracket1.matches[id]? and 
-            !bracket2.matches[id]? and 
-            !bracket3.matches[id]?
-                champBracket[id] = match
+            if !@bracket1.matches[id]? and 
+            !@bracket2.matches[id]? and 
+            !@bracket3.matches[id]?
+                @champBracket.matches[id] = match
                 
         ###
          # Since the last match in the champ bracket has no subsequent games,
          # it's very easy to just look through them and find the one with no
          # subsequent matches.
         ###
-        for id, match of champBracket
+        for id, match of @champBracket.matches
             if match.subsequent_matches.length == 0
-                champBracket.lastmatch = id
+                @champBracket.lastmatch = id
                 break
         
         console.log "Finished reading file."

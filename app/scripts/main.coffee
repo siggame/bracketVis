@@ -83,6 +83,7 @@ class BracketViewer
         @textHeight = "14px"
         @fileLoaded = (false)
         @currentDrawFunction = (null)
+        @currentBracket = null
         
         @brackButtons = []
         @brackButtons.push new Button
@@ -120,9 +121,29 @@ class BracketViewer
                 @bracket2.matches[id].visible = (true)
             if @bracket3.matches[id]?
                 @bracket3.matches[id].visible = (true)
+            
+            revealPreviousMatches = (nextid, nextMatch) =>
+                nextMatch.visible = (true)
+                if @bracket2.matches[nextid]?
+                    @bracket2.matches[nextid].visible = (true)
+                if @bracket3.matches[nextid]?
+                    @bracket3.matches[nextid].visible = (true)
+
+                if nextMatch.previous_matches.length == 0    
+                    return
+                    
+                prevMatch1id = nextMatch.previous_matches[0].toString()
+                prevMatch2id = nextMatch.previous_matches[1].toString()
+                prevMatch1 = @tourneyData[prevMatch1id]
+                prevMatch2 = @tourneyData[prevMatch2id]
+                
+                revealPreviousMatches(prevMatch1id, prevMatch1)
+                revealPreviousMatches(prevMatch2id, prevMatch2)
+            
+            revealPreviousMatches(id, match)
             @redraw()
        
-        previousDrawFunction = @currentDrawFunction
+        previousBracket = @currentBracket
         
         backBtn = new Button
         backBtn.pos.w = 60
@@ -132,7 +153,7 @@ class BracketViewer
         backBtn.text = "Back"
         backBtn.color = "#AAAAAA"
         backBtn.func = () =>
-            @currentDrawFunction = previousDrawFunction
+            @currentDrawFunction = @drawBracketFunc(previousBracket)
             $(@canvas).off 'click'
             $(@canvas).on 'click', @onclick
             @redraw()
@@ -279,7 +300,7 @@ class BracketViewer
       
             match.click_field = new Rect
             
-            match.visible = false
+            match.visible = (false)
             match.isVisible = () -> @visible 
       
         ###
@@ -639,6 +660,7 @@ class BracketViewer
                         @bracket3.matches[prevMatch2id] = new PlayerSlot(prevMatch2.player_1)
         
         @currentDrawFunction = @drawBracketFunc(@bracket1)
+        @currentBracket = @bracket1
         @fileLoaded = (true)
         @redraw()
                 
@@ -1058,6 +1080,7 @@ class BracketViewer
         @brackButtons[1].color = "#FFFFFF"
         @brackButtons[1].func = () =>
             @currentDrawFunction = @drawBracketFunc(@bracket2)
+            @currentBracket = @bracket2
             @redraw()
         
         @brackButtons[0].pos.w = w
@@ -1068,6 +1091,7 @@ class BracketViewer
         @brackButtons[0].color = "#FFFFFF"
         @brackButtons[0].func = () =>
             @currentDrawFunction = @drawBracketFunc(@bracket1)
+            @currentBracket = @bracket1
             @redraw()
             
         @brackButtons[2].pos.w = w
@@ -1078,6 +1102,7 @@ class BracketViewer
         @brackButtons[2].color = "#FFFFFF"
         @brackButtons[2].func = () =>
             @currentDrawFunction = @drawBracketFunc(@bracket3)
+            @currentBracket = @bracket3
             @redraw()
         
         for btn in @brackButtons

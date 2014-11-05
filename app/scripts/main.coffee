@@ -198,7 +198,7 @@ class BracketViewer
                 
                 @context.font = '30px Verdana'
                 @context.textAlign = 'center'
-                @context.fillStyle = '#000000'
+                @context.fillStyle = '#FF0000'
                 texty += 33
                 @context.fillText(match.winner, textx, texty)
             else

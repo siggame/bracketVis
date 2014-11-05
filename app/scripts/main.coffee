@@ -116,6 +116,10 @@ class BracketViewer
         revealBtn.color = "#AAAAAA"
         revealBtn.func = () =>
             @tourneyData[id].visible = (true)
+            if @bracket2.matches[id]?
+                @bracket2.matches[id].visible = (true)
+            if @bracket3.matches[id]?
+                @bracket3.matches[id].visible = (true)
             @redraw()
        
         previousDrawFunction = @currentDrawFunction
@@ -672,38 +676,39 @@ class BracketViewer
         @context.lineWidth = 1
         @context.stroke()
         
-        text = slot.player
-        #line 1
-        i = 0
-        j = 0
-        while @context.measureText(text.substring(0, i+1)).width < @rectWidth
-            if text.substring(0, i) == text
-                break;
-            i++
-        
-        #line 2
-        if text.substring(0, i) != text
-            j = i
-            while @context.measureText(text.substring(i, j + 1)).width < @rectWidth
-                if j >= text.length
+        if slot.isVisible()
+            text = slot.player
+            #line 1
+            i = 0
+            j = 0
+            while @context.measureText(text.substring(0, i+1)).width < @rectWidth
+                if text.substring(0, i) == text
                     break;
-                j++
-        
-        @context.font = @textHeight + ' Verdana'
-        @context.textAlign = 'center'
-        @context.fillStyle = '#000000'
-        if j == 0
-            @context.fillText(text.substring(0, i), 
-            (x1 * @canvas.width) + rectx + (@rectWidth/2), 
-            (y1 * @canvas.height) + recty + (@rectHeight/2) + (parseInt(@textHeight)/2) - 1)                  
-        else
-            @context.fillText(text.substring(0, i),
-            (x1 * @canvas.width) + rectx + (@rectWidth/2),
-            (y1 * @canvas.height) + recty + (@rectHeight/2) - 3)
-            @context.textAlign = 'left'
-            @context.fillText(text.substring(i, j)
-            (x1 * @canvas.width) + rectx,
-            (y1 * @canvas.height) + recty + @rectHeight - 3)
+                i++
+            
+            #line 2
+            if text.substring(0, i) != text
+                j = i
+                while @context.measureText(text.substring(i, j + 1)).width < @rectWidth
+                    if j >= text.length
+                        break;
+                    j++
+            
+            @context.font = @textHeight + ' Verdana'
+            @context.textAlign = 'center'
+            @context.fillStyle = '#000000'
+            if j == 0
+                @context.fillText(text.substring(0, i), 
+                (x1 * @canvas.width) + rectx + (@rectWidth/2), 
+                (y1 * @canvas.height) + recty + (@rectHeight/2) + (parseInt(@textHeight)/2) - 1)                  
+            else
+                @context.fillText(text.substring(0, i),
+                (x1 * @canvas.width) + rectx + (@rectWidth/2),
+                (y1 * @canvas.height) + recty + (@rectHeight/2) - 3)
+                @context.textAlign = 'left'
+                @context.fillText(text.substring(i, j)
+                (x1 * @canvas.width) + rectx,
+                (y1 * @canvas.height) + recty + @rectHeight - 3)
                     
     drawMatch : (bracket, match, x1, x2, y1, y2, xinc, goLeft, alignment) =>   
         width = x2 - x1
@@ -793,7 +798,9 @@ class BracketViewer
             slot2y2 = y2
             
             slot1 = new PlayerSlot match.player_1
+            slot1.visible = true
             slot2 = new PlayerSlot match.player_2
+            slot2.visible = true
             
             @context.beginPath()
             if goLeft
@@ -1104,7 +1111,7 @@ class BracketViewer
     
     redraw: () =>
         @canvas.width = @canvas.width
-        if @currentDrawFunction != null
+        if @currentDrawFunction != (null)
             @currentDrawFunction()
         console.log "redrawn"
         

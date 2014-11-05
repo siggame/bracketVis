@@ -16,6 +16,32 @@ class Bracket
     constructor: () ->
         @lastmatch = (null)
         @matches = {}
+
+class Rect
+    constructor: () ->
+        @x = 0
+        @y = 0
+        @w = 0
+        @h = 0
+
+class Button
+    constructor: () ->
+        @pos = new Rect
+        @text = "Reveal"
+        @color = "#000000"
+        @func = null
+        
+    ifClick: (x, y) ->
+        if x > @pos.x and
+        x < @pos.x + @pos.w and
+        y > @pos.y and
+        y < @pos.y + @pos.h and
+        @func != null
+            @func()
+            
+    click: () ->
+        if @func != null
+            @func()
         
 ###
  # Every Bracket has a list of matches and playerslots
@@ -39,6 +65,7 @@ class BracketViewer
         @rectHeight = 40
         @textHeight = "14px"
         @fileLoaded = (false)
+        @currentDrawFunction = null
         
         try
             @context = @canvas.getContext "2d"
@@ -54,8 +81,144 @@ class BracketViewer
         $(mainDiv).bind 'drop', @drop
         
         $(window).resize @resize
+        $(@canvas).click @onclick
         @resize()
             
+    drawMatchPageFunc: (id, match) =>
+        revealBtn = new Button
+        revealBtn.pos.w = 120
+        revealBtn.pos.h = 60
+        revealBtn.pos.x = (0.5 * @canvas.width) - (revealBtn.pos.w/2)
+        revealBtn.pos.y = (0.90 * @canvas.height) - (revealBtn.pos.h/2)
+        revealBtn.text = "Reveal"
+        revealBtn.color = "#AAAAAA"
+        revealBtn.func = () =>
+            @tourneyData[id].visible = true
+            @redraw()
+       
+        previousScreenFunction = @currentDrawFunction
+        
+        backBtn = new Button
+        backBtn.pos.w = 60
+        backBtn.pos.h = 40
+        backBtn.pos.x = (0.15 * @canvas.width) - (backBtn.pos.w/2)
+        backBtn.pos.y = (0.15 * @canvas.height) - (backBtn.pos.h/2)
+        backBtn.text = "Back"
+        backBtn.color = "#AAAAAA"
+        backBtn.func = () =>
+            @currentDrawFunction = previousScreenFunction
+            @redraw()
+        
+        matchPageClick = (event) =>
+            offset = $(@canvas).offset()
+            x = event.clientX - offset.left
+            y = event.clientY - offset.top
+            
+            revealBtn.ifClick(x, y)
+            backBtn.ifClick(x, y)
+                    
+        $(@canvas).click matchPageClick
+        
+        drawFunc = () =>
+            @context.beginPath() 
+            @context.rect(backBtn.pos.x, backBtn.pos.y,
+            backBtn.pos.w, backBtn.pos.h)
+            @context.fillStyle = backBtn.color
+            @context.strokeStyle = "#000000"
+            @context.fill()
+            @context.stroke()
+            
+            @context.font = '18px Verdana'
+            @context.textAlign = 'left'
+            @context.fillStyle = '#000000'
+            textWidth = @context.measureText(backBtn.text).width
+            textx = backBtn.pos.x + (backBtn.pos.w/2) - (textWidth/2)
+            texty = backBtn.pos.y + (backBtn.pos.h/2) + 8
+            @context.fillText(backBtn.text, textx, texty)           
+            
+            @context.beginPath()
+            @context.rect(revealBtn.pos.x, revealBtn.pos.y,
+            revealBtn.pos.w, revealBtn.pos.h)
+            @context.fillStyle = revealBtn.color
+            @context.strokeStyle = "#000000"
+            @context.fill()
+            @context.stroke()
+            
+            @context.font = '18px Verdana'
+            @context.textAlign = 'left'
+            @context.fillStyle = '#000000'
+            textWidth = @context.measureText(revealBtn.text).width
+            textx = revealBtn.pos.x + (revealBtn.pos.w/2) - (textWidth/2)
+            texty = revealBtn.pos.y + (revealBtn.pos.h/2) + 8
+            @context.fillText(revealBtn.text, textx, texty)
+            
+            player1 = match.player_1
+            player2 = match.player_2
+            
+            @context.font = '30px Verdana'
+            @context.textAlign = 'left'
+            @context.fillStyle = '#000000'
+            textx = (0.20 * @canvas.width)
+            texty = (0.5 * @canvas.height)
+            maxWidth = (0.45 * @canvas.width) - (0.2 * @canvas.width)
+            @context.fillText(player1, textx, texty, maxWidth)
+            textx = (0.80 * @canvas.width)
+            texty = (0.5 * @canvas.height)
+            @context.textAlign = 'right'
+            @context.fillText(player2, textx, texty, maxWidth)
+            
+            if match.isVisible()
+                @context.font = '30px Verdana'
+                @context.textAlign = 'center'
+                @context.fillStyle = '#000000'
+                textx = (0.5 * @canvas.width)
+                texty = (0.7 * @canvas.height)
+                @context.fillText("Winner:", textx, texty)
+                
+                @context.font = '30px Verdana'
+                @context.textAlign = 'center'
+                @context.fillStyle = '#FF0000'
+                texty += 33
+                @context.fillText(match.winner, textx, texty)
+            else
+                @context.font = '30px Verdana'
+                @context.textAlign = 'center'
+                @context.fillStyle = '#000000'
+                textx = (0.5 * @canvas.width)
+                texty = (0.7 * @canvas.height)
+                @context.fillText("Log Location:", textx, texty)
+                
+                @context.font = '30px Verdana'
+                @context.textAlign = 'center'
+                @context.fillStyle = '#000000'
+                texty += 33
+                @context.fillText(match.log_location, textx, texty)
+           
+            @context.textAlign = 'center' 
+            @context.fillStyle = '#ff0000'
+            textx = (0.5 * @canvas.width)
+            texty = (0.5 * @canvas.height)
+            @context.fillText(".vs", textx, texty)
+            
+            
+    drawBracketFunc: (bracket) =>
+        drawFunc = () =>
+            @drawBracket(bracket)
+            
+    onclick: (event) =>
+        if @fileLoaded
+            for id, match of @tourneyData
+                offset = $(@canvas).offset()
+                x = event.clientX - offset.left
+                y = event.clientY - offset.top
+                
+                if x > match.click_field.x and 
+                x < match.click_field.x + match.click_field.w and
+                y > match.click_field.y and
+                y < match.click_field.y + match.click_field.h
+                    @currentDrawFunction = @drawMatchPageFunc(id, match)
+                    @redraw()
+                
     drop: (event) =>
         console.log "wakka"
         
@@ -108,6 +271,11 @@ class BracketViewer
                     
                 prevMatch1.subsequent_matches.push id
                 prevMatch2.subsequent_matches.push id
+      
+            match.click_field = new Rect
+            
+            match.visible = false
+            match.isVisible = () -> @visible 
       
         ###
          # Start filling the first bracket. This will place references to 
@@ -464,9 +632,428 @@ class BracketViewer
                         @bracket3.matches[prevMatch2id] = new PlayerSlot(prevMatch2.player_2)
                     else
                         @bracket3.matches[prevMatch2id] = new PlayerSlot(prevMatch2.player_1)
+        
+        @currentDrawFunction = @drawBracketFunc(@bracket1)
         @fileLoaded = (true)
         @redraw()
                 
+    drawPlayerSlot : (bracket, slot, x1, x2, y1, y2, goLeft) =>
+        width = x2 - x1
+        height = y2 - y1
+        
+        rectx = ((width/2) * @canvas.width) - (@rectWidth/2)
+        recty = ((height/2) * @canvas.height) - (@rectHeight/2)
+        
+        @context.beginPath()    
+        @context.rect( (x1 * @canvas.width) + rectx, 
+        (y1 * @canvas.height)+ recty,
+        @rectWidth,
+        @rectHeight)
+        @context.fillStyle = @rectFill
+        @context.strokeStyle = @rectStroke
+        @context.lineWidth = 1
+        @context.fill()
+        @context.stroke()
+        
+        if !goLeft
+            linex1 = parseInt(x1 * @canvas.width) + 0.5
+            linex2 = linex1 + parseInt(rectx)
+        else
+            linex1 = parseInt((x1 * @canvas.width) + 
+            rectx + @rectWidth) + 0.5
+            linex2 = parseInt(x2 * @canvas.width) + 0.5
+        liney = parseInt((y1 * @canvas.height) + recty + 
+        (@rectHeight/2)) + 0.5
+        @context.beginPath()                
+        @context.moveTo(linex1, liney)
+        @context.lineTo(linex2, liney)
+        @context.strokeStyle = "#000000"
+        @context.lineWidth = 1
+        @context.stroke()
+        
+        text = slot.player
+        #line 1
+        i = 0
+        j = 0
+        while @context.measureText(text.substring(0, i+1)).width < @rectWidth
+            if text.substring(0, i) == text
+                break;
+            i++
+        
+        #line 2
+        if text.substring(0, i) != text
+            j = i
+            while @context.measureText(text.substring(i, j + 1)).width < @rectWidth
+                if j >= text.length
+                    break;
+                j++
+        
+        @context.font = @textHeight + ' Verdana'
+        @context.textAlign = 'center'
+        @context.fillStyle = '#000000'
+        if j == 0
+            @context.fillText(text.substring(0, i), 
+            (x1 * @canvas.width) + rectx + (@rectWidth/2), 
+            (y1 * @canvas.height) + recty + (@rectHeight/2) + (parseInt(@textHeight)/2) - 1)                  
+        else
+            @context.fillText(text.substring(0, i),
+            (x1 * @canvas.width) + rectx + (@rectWidth/2),
+            (y1 * @canvas.height) + recty + (@rectHeight/2) - 3)
+            @context.textAlign = 'left'
+            @context.fillText(text.substring(i, j)
+            (x1 * @canvas.width) + rectx,
+            (y1 * @canvas.height) + recty + @rectHeight - 3)
+                    
+    drawMatch : (bracket, match, x1, x2, y1, y2, xinc, goLeft, alignment) =>   
+        width = x2 - x1
+        height = y2 - y1    
+        
+        switch alignment
+            when "middle"
+                rectx = (width/2) * @canvas.width - (@rectWidth/2)
+                recty = (height/2) * @canvas.height - (@rectHeight/2)
+            when "bottom"
+                rectx = (width/2) * @canvas.width - (@rectWidth/2)
+                recty = height * @canvas.height - (@rectHeight) - 5
+            
+        @context.beginPath()    
+        @context.rect( (x1 * @canvas.width) + rectx, 
+        (y1 * @canvas.height)+ recty,
+        @rectWidth,
+        @rectHeight)
+        @context.fillStyle = @rectFill
+        @context.strokeStyle = @rectStroke
+        @context.lineWidth = 1
+        @context.fill()
+        @context.stroke()
+        
+        match.click_field.x = (x1 * @canvas.width) + rectx
+        match.click_field.y = (y1 * @canvas.height) + recty
+        match.click_field.w = @rectWidth
+        match.click_field.h = @rectHeight
+        
+        linex1 = parseInt(x1 * @canvas.width) + 0.5
+        linex2 = linex1 + parseInt(rectx)
+        linex3 = linex2 + parseInt(@rectWidth)
+        linex4 = parseInt(x2 * @canvas.width) + 0.5
+        liney = parseInt((y1 * @canvas.height) + recty +                
+        (@rectHeight/2)) + 0.5
+        @context.moveTo(linex1, liney)
+        @context.lineTo(linex2, liney)
+        @context.moveTo(linex3, liney)
+        @context.lineTo(linex4, liney)
+        @context.lineTo(linex4, liney2)
+        @context.strokeStyle = "#000000"
+        @context.lineWidth = 1
+        @context.stroke()
+        
+        if match.isVisible()
+            if match.is_slot()
+                text = match.player
+            else
+                text = match.winner
+            
+            @context.font = @textHeight + ' Verdana'
+            @context.textAlign = 'center'
+            @context.fillStyle = '#000000'
+            #line 1
+            i = 0
+            j = 0
+            while @context.measureText(text.substring(0, i+1)).width < @rectWidth
+                if text.substring(0, i) == text
+                    break;
+                i++
+            
+            #line 2
+            if text.substring(0, i) != text
+                j = i
+                while @context.measureText(text.substring(i, j + 1)).width < @rectWidth
+                    if j >= text.length
+                        break;
+                    j++                
+            
+            if j == 0
+                @context.fillText(text.substring(0, i), 
+                (x1 * @canvas.width) + rectx + (@rectWidth/2), 
+                (y1 * @canvas.height) + recty + (@rectHeight/2) + (parseInt(@textHeight)/2) - 1)                  
+            else
+                @context.fillText(text.substring(0, i),
+                (x1 * @canvas.width) + rectx + (@rectWidth/2),
+                (y1 * @canvas.height) + recty + (@rectHeight/2) - 3)
+                @context.textAlign = 'left'
+                @context.fillText(text.substring(i, j)
+                (x1 * @canvas.width) + rectx,
+                (y1 * @canvas.height) + recty + @rectHeight - 3)
+        
+        if match.previous_matches.length == 0
+            slot1y1 = y1
+            slot1y2 = y1 + (height/2)
+            slot2y1 = slot1y2
+            slot2y2 = y2
+            
+            slot1 = new PlayerSlot match.player_1
+            slot2 = new PlayerSlot match.player_2
+            
+            @context.beginPath()
+            if goLeft
+                linex = (x1 * @canvas.width)
+            else
+                linex = (x2 * @canvas.width)
+            liney1 = ((slot1y1 * @canvas.height) + 
+            (((slot1y2 - slot1y1)/2) * @canvas.height))
+            liney2 = ((slot2y1 * @canvas.height) +
+            (((slot2y2 - slot2y1)/2) * @canvas.height))
+            @context.moveTo(linex, liney1)
+            @context.lineTo(linex, liney2)
+            @context.strokeStyle = "#000000"
+            @context.lineWidth = 1
+            @context.stroke()                    
+            
+            if goLeft
+                @drawPlayerSlot(bracket, slot1, x1 - xinc, x1,
+                slot1y1, slot1y2, goLeft)
+                @drawPlayerSlot(bracket, slot2, x1 - xinc, x1,
+                slot2y1, slot2y2, goLeft)
+            else
+                @drawPlayerSlot(bracket, slot1, x2, x2 + xinc,
+                slot1y1, slot1y2, goLeft)
+                @drawPlayerSlot(bracket, slot2, x2, x2 + xinc,
+                slot2y1, slot2y2, goLeft)
+            return
+            
+        prevMatch1id = match.previous_matches[0]
+        prevMatch2id = match.previous_matches[1]
+        prevMatch1 = bracket.matches[prevMatch1id]
+        prevMatch2 = bracket.matches[prevMatch2id]
+        
+        prevMatch1y1 = y1
+        if prevMatch1.is_slot() && !prevMatch2.is_slot()
+            prevMatch1y2 = y1 + @rectHeight/@canvas.height + 10/@canvas.height
+            prevMatch2y1 = y1
+        else if !prevMatch1.is_slot() && prevMatch2.is_slot()
+            prevMatch1y2 = y2
+            prevMatch2y1 = y2 - @rectHeight/@canvas.height - 10/@canvas.height
+        else
+            prevMatch1y2 = y1 + (height/2)
+            prevMatch2y1 = prevMatch1y2
+        prevMatch2y2 = y2#prevMatch2y1 + (prevMatch2Value * (height/divisor))
+        
+        @context.beginPath()
+        if goLeft
+            linex = (x1 * @canvas.width)
+        else
+            linex = (x2 * @canvas.width)
+        
+
+        liney1 = ((prevMatch1y1 * @canvas.height) + 
+        (((prevMatch1y2 - prevMatch1y1)/2) * @canvas.height))
+        liney2 = liney = parseInt((y1 * @canvas.height) + recty +                
+        (@rectHeight/2)) + 0.5
+        if (@rectHeight >
+        ((height/2) * @canvas.height) - (@rectHeight/2))
+            if !prevMatch1.is_slot() and prevMatch2.is_slot()
+                liney3 = (prevMatch1y2 * @canvas.height) -
+                (@rectHeight/2) - 5
+            else if prevMatch1.is_slot() and !prevMatch2.is_slot()
+                liney3 = (prevMatch2y2 * @canvas.height) -
+                (@rectHeight/2) - 5
+            else
+                liney3 = ((prevMatch2y1 * @canvas.height) +
+                (((prevMatch2y2 - prevMatch2y1)/2) * @canvas.height))
+        else
+            liney3 = ((prevMatch2y1 * @canvas.height) +
+            (((prevMatch2y2 - prevMatch2y1)/2) * @canvas.height))
+
+        @context.moveTo(linex, liney1)
+        @context.lineTo(linex, liney2)
+        @context.lineTo(linex, liney3)
+        @context.strokeStyle = "#000000"
+        @context.lineWidth = 1
+        @context.stroke()
+
+        
+        if (@rectHeight >
+        ((height/2) * @canvas.height) - (@rectHeight/2))
+            a = "bottom"
+        else
+            a = "middle"
+            
+        if goLeft
+            if prevMatch1.is_slot()
+                @drawPlayerSlot(bracket, prevMatch1, x1-xinc, x1,
+                prevMatch1y1, prevMatch1y2, goLeft)
+            else
+                @drawMatch(bracket, prevMatch1, x1-xinc, x1, prevMatch1y1, 
+                prevMatch1y2, xinc, goLeft, a)
+            if prevMatch2.is_slot()    
+                @drawPlayerSlot(bracket, prevMatch2, x1-xinc, x1,
+                prevMatch2y1, prevMatch2y2, goLeft)
+            else
+                @drawMatch(bracket, prevMatch2, x1-xinc, x1, prevMatch2y1,
+                prevMatch2y2, xinc, goLeft, a)
+        else
+            if prevMatch1.is_slot()
+                @drawPlayerSlot(bracket, prevMatch1, x2, x2+xinc,
+                prevMatch1y1, prevMatch1y2, goLeft)
+            else
+                @drawMatch(bracket, prevMatch1, x2, x2+xinc, prevMatch1y1,
+                prevMatch1y2, xinc, goLeft, a)
+            if prevMatch2.is_slot()
+                @drawPlayerSlot(bracket, prevMatch2, x2, x2+xinc,
+                prevMatch2y1, prevMatch2y2, goLeft)
+            else
+                @drawMatch(bracket, prevMatch2, x2, x2+xinc, prevMatch2y1,
+                prevMatch2y2, xinc, goLeft, a)
+    
+    drawBracket : (bracket) =>
+        match = bracket.matches[bracket.lastmatch]
+        prevMatch1id = match.previous_matches[0].toString()
+        prevMatch2id = match.previous_matches[1].toString()
+        prevMatch1 = bracket.matches[prevMatch1id]
+        prevMatch2 = bracket.matches[prevMatch2id]
+                
+        d1 = @depthRecurse(bracket, 0, prevMatch1)
+        d2 = @depthRecurse(bracket, 0, prevMatch2)
+    
+        if d1 == d2
+            xDivisions = d1 + d2 + 1
+        else
+            xDivisions = (if d1 > d2 then d1 else d2) + 1
+
+        if d1 == d2
+            initialx1 = (1/xDivisions) * d1
+            initialx2 = initialx1 + (1/xDivisions)
+        else
+            initialx1 = 0
+            initialx2 = initialx1 + (1/xDivisions)
+        
+        initwidth = initialx2 - initialx1
+        initheight = 1    
+        
+        initrectx = ((initwidth/2) * @canvas.width) - (@rectWidth/2)
+        initrecty = ((initheight/2) * @canvas.height) - (@rectHeight/2)
+            
+        @context.beginPath()
+        @context.rect( (initialx1 * @canvas.width) + initrectx, 
+        initrecty,
+        @rectWidth,
+        @rectHeight)
+        @context.fillStyle = @rectFill
+        @context.strokeStyle = @rectStroke
+        @context.lineWidth = 1
+        @context.fill()
+        @context.stroke()
+        
+        match.click_field.x = (initialx1 * @canvas.width) + initrectx
+        match.click_field.y = initrecty
+        match.click_field.w = @rectWidth
+        match.click_field.h = @rectHeight
+        
+        linex1 = parseInt(initialx1 * @canvas.width) + 0.5
+        linex2 = linex1 + parseInt(initrectx)
+        linex3 = linex2 + parseInt(@rectWidth)
+        linex4 = parseInt(initialx2 * @canvas.width) + 0.5
+        liney = parseInt(initrecty + (@rectHeight/2)) + 0.5
+        @context.beginPath()
+        if d1 == d2
+            @context.moveTo(linex1, liney)
+            @context.lineTo(linex2, liney)
+        @context.moveTo(linex3, liney)
+        @context.lineTo(linex4, liney)
+        @context.strokeStyle = "#000000"
+        @context.lineWidth = 1
+        @context.stroke()
+        
+        @context.font = @textHeight + ' Verdana'
+        @context.textAlign = 'center'
+        @context.fillStyle = '#000000'
+        if match.isVisible()
+            text = match.winner
+            #line 1
+            i = 0
+            j = 0
+            while @context.measureText(text.substring(0, i+1)).width < @rectWidth
+                if text.substring(0, i) == text
+                    break;
+                i++
+            
+            #line 2
+            if text.substring(0, i) != text
+                j = i
+                while @context.measureText(text.substring(i, j + 1)).width < @rectWidth
+                    if j >= text.length
+                        break;
+                    j++
+            
+            if j == 0
+                @context.fillText(text.substring(0, i), 
+                (initialx1 * @canvas.width) + initrectx + (@rectWidth/2), 
+                initrecty + (@rectHeight/2) + (parseInt(@textHeight)/2) - 1)                  
+            else
+                @context.fillText(text.substring(0, i),
+                (initialx1 * @canvas.width) + initrectx + (@rectWidth/2),
+                initrecty + (@rectHeight/2) - 3)
+                @context.textAlign = 'left'
+                @context.fillText(text.substring(i, j)
+                (initialx1 * @canvas.width) + initrectx,
+                initrecty + @rectHeight - 3)
+        
+        if d1 == d2
+            if prevMatch1.is_slot()
+                @drawPlayerSlot(bracket, prevMatch1, initialx1 - (1/xDivisions), initialx1,
+                0, 1, (1/xDivisions), (true))
+            else
+                @drawMatch(bracket, prevMatch1, initialx1 - (1/xDivisions), initialx1, 
+                0, 1, (1/xDivisions), (true), "middle")
+            if prevMatch2.is_slot()
+                @drawPlayerSlot(bracket, prevMatch2, initialx2, initialx2 + (1/xDivisions),
+                0, 1, (1/xDivisions), (false))
+            else
+                @drawMatch(bracket, prevMatch2, initialx2, initialx2 + (1/xDivisions),
+                0, 1, (1/xDivisions), (false), "middle")
+        else
+            if prevMatch1.is_slot() and !prevMatch2.is_slot()
+                @context.beginPath()
+                liney = parseInt((((@rectHeight/@canvas.height) + (10/@canvas.height))/2) *
+                @canvas.height) + 0.5
+                @context.moveTo(initialx2 * @canvas.width, liney)
+                @context.lineTo(initialx2 * @canvas.width, parseInt((1/2) * @canvas.height) + 0.5)
+                @context.stroke()
+                @drawPlayerSlot(bracket, prevMatch1, initialx2, initialx2 + (1/xDivisions),
+                0, (@rectHeight/@canvas.height) + (10/@canvas.height), false)
+                @drawMatch(bracket, prevMatch2, initialx2, initialx2 + (1/xDivisions),
+                0, 1, (1/xDivisions), false, "middle")
+            else if !prevMatch1.is_slot() and prevMatch2.is_slot()
+                @context.beginPath()
+                liney = parseInt((((@rectHeight/@canvas.height) + (10/@canvas.height))/2) *
+                @canvas.height) + 0.5
+                @context.moveTo(initialx2 * @canvas.width, liney)
+                @context.lineTo(initialx2 * @canvas.width, parseInt((1/2) * @canvas.height) + 0.5)
+                @context.stroke()
+                @drawMatch(bracket, prevMatch1, initialx2, initialx2 + (1/xDivisions),
+                0, 1, (1/xDivisions), false, "middle")
+                @drawPlayerSlot(bracket, prevMatch2, initialx2, initialx2 + (1/xDivisions),
+                0, (@rectHeight/@canvas.height) + (10/@canvas.height), false) 
+    
+    depthRecurse : (bracket, depth, match) =>
+        if match.is_slot()
+            return depth + 1
+        if match.previous_matches.length == 0
+            return depth + 2
+    
+        prev1id = match.previous_matches[0].toString()
+        prev2id = match.previous_matches[1].toString()
+        prev1 = bracket.matches[prev1id]
+        prev2 = bracket.matches[prev2id]
+    
+        v1 = 0
+        v2 = 0
+        if prev1?
+            v1 = @depthRecurse(bracket, depth+1, prev1)
+        if prev2?
+            v2 = @depthRecurse(bracket, depth+1, prev2)
+        return if v1 > v2 then v1 else v2
+    
     resize: () =>
         @canvas.width = $(window).width() - 5
         @canvas.height = $(window).height() - 5
@@ -474,419 +1061,9 @@ class BracketViewer
         console.log "resized"
     
     redraw: () =>
-        if @fileLoaded
-            depthRecurse = (bracket, depth, match) =>
-                if match.is_slot()
-                    return depth + 1
-                if match.previous_matches.length == 0
-                    return depth + 2
-            
-                prev1id = match.previous_matches[0].toString()
-                prev2id = match.previous_matches[1].toString()
-                prev1 = bracket.matches[prev1id]
-                prev2 = bracket.matches[prev2id]
-            
-                v1 = 0
-                v2 = 0
-                if prev1?
-                    v1 = depthRecurse(bracket, depth+1, prev1)
-                if prev2?
-                    v2 = depthRecurse(bracket, depth+1, prev2)
-                return if v1 > v2 then v1 else v2    
-                        
-            drawPlayerSlot = (bracket, slot, x1, x2, y1, y2, goLeft) =>
-                width = x2 - x1
-                height = y2 - y1
-                
-                rectx = ((width/2) * @canvas.width) - (@rectWidth/2)
-                recty = ((height/2) * @canvas.height) - (@rectHeight/2)
-                
-                @context.beginPath()    
-                @context.rect( (x1 * @canvas.width) + rectx, 
-                (y1 * @canvas.height)+ recty,
-                @rectWidth,
-                @rectHeight)
-                @context.fillStyle = @rectFill
-                @context.strokeStyle = @rectStroke
-                @context.lineWidth = 1
-                @context.fill()
-                @context.stroke()
-                
-                if !goLeft
-                    linex1 = parseInt(x1 * @canvas.width) + 0.5
-                    linex2 = linex1 + parseInt(rectx)
-                else
-                    linex1 = parseInt((x1 * @canvas.width) + 
-                    rectx + @rectWidth) + 0.5
-                    linex2 = parseInt(x2 * @canvas.width) + 0.5
-                liney = parseInt((y1 * @canvas.height) + recty + 
-                (@rectHeight/2)) + 0.5
-                @context.beginPath()                
-                @context.moveTo(linex1, liney)
-                @context.lineTo(linex2, liney)
-                @context.strokeStyle = "#000000"
-                @context.lineWidth = 1
-                @context.stroke()
-                
-                text = slot.player
-                #line 1
-                i = 0
-                j = 0
-                while @context.measureText(text.substring(0, i+1)).width < @rectWidth
-                    if text.substring(0, i) == text
-                        break;
-                    i++
-                
-                #line 2
-                if text.substring(0, i) != text
-                    j = i
-                    while @context.measureText(text.substring(i, j + 1)).width < @rectWidth
-                        if j >= text.length
-                            break;
-                        j++
-                
-                @context.font = @textHeight + ' Verdana'
-                @context.textAlign = 'center'
-                @context.fillStyle = '#000000'
-                if j == 0
-                    @context.fillText(text.substring(0, i), 
-                    (x1 * @canvas.width) + rectx + (@rectWidth/2), 
-                    (y1 * @canvas.height) + recty + (@rectHeight/2) + (parseInt(@textHeight)/2) - 1)                  
-                else
-                    @context.fillText(text.substring(0, i),
-                    (x1 * @canvas.width) + rectx + (@rectWidth/2),
-                    (y1 * @canvas.height) + recty + (@rectHeight/2) - 3)
-                    @context.textAlign = 'left'
-                    @context.fillText(text.substring(i, j)
-                    (x1 * @canvas.width) + rectx,
-                    (y1 * @canvas.height) + recty + @rectHeight - 3)
-            
-            ###
-             # alignment possible values
-             # "top"
-             # "middle"
-             # "bottom"
-            ###            
-            drawMatch = (bracket, match, x1, x2, y1, y2, xinc, goLeft, alignment) =>   
-                width = x2 - x1
-                height = y2 - y1    
-                
-                switch alignment
-                    when "middle"
-                        rectx = (width/2) * @canvas.width - (@rectWidth/2)
-                        recty = (height/2) * @canvas.height - (@rectHeight/2)
-                    when "bottom"
-                        rectx = (width/2) * @canvas.width - (@rectWidth/2)
-                        recty = height * @canvas.height - (@rectHeight) - 5
-                    
-                @context.beginPath()    
-                @context.rect( (x1 * @canvas.width) + rectx, 
-                (y1 * @canvas.height)+ recty,
-                @rectWidth,
-                @rectHeight)
-                @context.fillStyle = @rectFill
-                @context.strokeStyle = @rectStroke
-                @context.lineWidth = 1
-                @context.fill()
-                @context.stroke()
-                
-                if match.is_slot()
-                    text = match.player
-                else
-                    text = match.winner
-                
-                linex1 = parseInt(x1 * @canvas.width) + 0.5
-                linex2 = linex1 + parseInt(rectx)
-                linex3 = linex2 + parseInt(@rectWidth)
-                linex4 = parseInt(x2 * @canvas.width) + 0.5
-                liney = parseInt((y1 * @canvas.height) + recty +                
-                (@rectHeight/2)) + 0.5
-                @context.moveTo(linex1, liney)
-                @context.lineTo(linex2, liney)
-                @context.moveTo(linex3, liney)
-                @context.lineTo(linex4, liney)
-                @context.lineTo(linex4, liney2)
-                @context.strokeStyle = "#000000"
-                @context.lineWidth = 1
-                @context.stroke()
-                
-                @context.font = @textHeight + ' Verdana'
-                @context.textAlign = 'center'
-                @context.fillStyle = '#000000'
-                #line 1
-                i = 0
-                j = 0
-                while @context.measureText(text.substring(0, i+1)).width < @rectWidth
-                    if text.substring(0, i) == text
-                        break;
-                    i++
-                
-                #line 2
-                if text.substring(0, i) != text
-                    j = i
-                    while @context.measureText(text.substring(i, j + 1)).width < @rectWidth
-                        if j >= text.length
-                            break;
-                        j++                
-                
-                if j == 0
-                    @context.fillText(text.substring(0, i), 
-                    (x1 * @canvas.width) + rectx + (@rectWidth/2), 
-                    (y1 * @canvas.height) + recty + (@rectHeight/2) + (parseInt(@textHeight)/2) - 1)                  
-                else
-                    @context.fillText(text.substring(0, i),
-                    (x1 * @canvas.width) + rectx + (@rectWidth/2),
-                    (y1 * @canvas.height) + recty + (@rectHeight/2) - 3)
-                    @context.textAlign = 'left'
-                    @context.fillText(text.substring(i, j)
-                    (x1 * @canvas.width) + rectx,
-                    (y1 * @canvas.height) + recty + @rectHeight - 3)
-                
-                if match.previous_matches.length == 0
-                    slot1y1 = y1
-                    slot1y2 = y1 + (height/2)
-                    slot2y1 = slot1y2
-                    slot2y2 = y2
-                    
-                    slot1 = new PlayerSlot match.player_1
-                    slot2 = new PlayerSlot match.player_2
-                    
-                    @context.beginPath()
-                    if goLeft
-                        linex = (x1 * @canvas.width)
-                    else
-                        linex = (x2 * @canvas.width)
-                    liney1 = ((slot1y1 * @canvas.height) + 
-                    (((slot1y2 - slot1y1)/2) * @canvas.height))
-                    liney2 = ((slot2y1 * @canvas.height) +
-                    (((slot2y2 - slot2y1)/2) * @canvas.height))
-                    @context.moveTo(linex, liney1)
-                    @context.lineTo(linex, liney2)
-                    @context.strokeStyle = "#000000"
-                    @context.lineWidth = 1
-                    @context.stroke()                    
-                    
-                    if goLeft
-                        drawPlayerSlot(bracket, slot1, x1 - xinc, x1,
-                        slot1y1, slot1y2, goLeft)
-                        drawPlayerSlot(bracket, slot2, x1 - xinc, x1,
-                        slot2y1, slot2y2, goLeft)
-                    else
-                        drawPlayerSlot(bracket, slot1, x2, x2 + xinc,
-                        slot1y1, slot1y2, goLeft)
-                        drawPlayerSlot(bracket, slot2, x2, x2 + xinc,
-                        slot2y1, slot2y2, goLeft)
-                    return
-                    
-                prevMatch1id = match.previous_matches[0]
-                prevMatch2id = match.previous_matches[1]
-                prevMatch1 = bracket.matches[prevMatch1id]
-                prevMatch2 = bracket.matches[prevMatch2id]
-                
-                prevMatch1y1 = y1
-                if prevMatch1.is_slot() && !prevMatch2.is_slot()
-                    prevMatch1y2 = y1 + @rectHeight/@canvas.height + 10/@canvas.height
-                    prevMatch2y1 = y1
-                else if !prevMatch1.is_slot() && prevMatch2.is_slot()
-                    prevMatch1y2 = y2
-                    prevMatch2y1 = y2 - @rectHeight/@canvas.height - 10/@canvas.height
-                else
-                    prevMatch1y2 = y1 + (height/2)
-                    prevMatch2y1 = prevMatch1y2
-                prevMatch2y2 = y2#prevMatch2y1 + (prevMatch2Value * (height/divisor))
-                
-                @context.beginPath()
-                if goLeft
-                    linex = (x1 * @canvas.width)
-                else
-                    linex = (x2 * @canvas.width)
-                
-
-                liney1 = ((prevMatch1y1 * @canvas.height) + 
-                (((prevMatch1y2 - prevMatch1y1)/2) * @canvas.height))
-                liney2 = liney = parseInt((y1 * @canvas.height) + recty +                
-                (@rectHeight/2)) + 0.5
-                if (@rectHeight >
-                ((height/2) * @canvas.height) - (@rectHeight/2))
-                    if !prevMatch1.is_slot() and prevMatch2.is_slot()
-                        liney3 = (prevMatch1y2 * @canvas.height) -
-                        (@rectHeight/2) - 5
-                    else if prevMatch1.is_slot() and !prevMatch2.is_slot()
-                        liney3 = (prevMatch2y2 * @canvas.height) -
-                        (@rectHeight/2) - 5
-                    else
-                        liney3 = ((prevMatch2y1 * @canvas.height) +
-                        (((prevMatch2y2 - prevMatch2y1)/2) * @canvas.height))
-                else
-                    liney3 = ((prevMatch2y1 * @canvas.height) +
-                    (((prevMatch2y2 - prevMatch2y1)/2) * @canvas.height))
-
-                @context.moveTo(linex, liney1)
-                @context.lineTo(linex, liney2)
-                @context.lineTo(linex, liney3)
-                @context.strokeStyle = "#000000"
-                @context.lineWidth = 1
-                @context.stroke()
-
-                
-                if (@rectHeight >
-                ((height/2) * @canvas.height) - (@rectHeight/2))
-                    a = "bottom"
-                else
-                    a = "middle"
-                    
-                if goLeft
-                    if prevMatch1.is_slot()
-                        drawPlayerSlot(bracket, prevMatch1, x1-xinc, x1,
-                        prevMatch1y1, prevMatch1y2, goLeft)
-                    else
-                        drawMatch(bracket, prevMatch1, x1-xinc, x1, prevMatch1y1, 
-                        prevMatch1y2, xinc, goLeft, a)
-                    if prevMatch2.is_slot()    
-                        drawPlayerSlot(bracket, prevMatch2, x1-xinc, x1,
-                        prevMatch2y1, prevMatch2y2, goLeft)
-                    else
-                        drawMatch(bracket, prevMatch2, x1-xinc, x1, prevMatch2y1,
-                        prevMatch2y2, xinc, goLeft, a)
-                else
-                    if prevMatch1.is_slot()
-                        drawPlayerSlot(bracket, prevMatch1, x2, x2+xinc,
-                        prevMatch1y1, prevMatch1y2, goLeft)
-                    else
-                        drawMatch(bracket, prevMatch1, x2, x2+xinc, prevMatch1y1,
-                        prevMatch1y2, xinc, goLeft, a)
-                    if prevMatch2.is_slot()
-                        drawPlayerSlot(bracket, prevMatch2, x2, x2+xinc,
-                        prevMatch2y1, prevMatch2y2, goLeft)
-                    else
-                        drawMatch(bracket, prevMatch2, x2, x2+xinc, prevMatch2y1,
-                        prevMatch2y2, xinc, goLeft, a)
-
-            drawBracket = (bracket) =>
-                match = bracket.matches[bracket.lastmatch]
-                prevMatch1id = match.previous_matches[0].toString()
-                prevMatch2id = match.previous_matches[1].toString()
-                prevMatch1 = bracket.matches[prevMatch1id]
-                prevMatch2 = bracket.matches[prevMatch2id]
-                        
-                d1 = depthRecurse(bracket, 0, prevMatch1)
-                d2 = depthRecurse(bracket, 0, prevMatch2)
-            
-                if d1 == d2
-                    xDivisions = d1 + d2 + 1
-                else
-                    xDivisions = (if d1 > d2 then d1 else d2) + 1
-        
-                if d1 == d2
-                    initialx1 = (1/xDivisions) * d1
-                    initialx2 = initialx1 + (1/xDivisions)
-                else
-                    initialx1 = 0
-                    initialx2 = initialx1 + (1/xDivisions)
-                
-                initwidth = initialx2 - initialx1
-                initheight = 1    
-                
-                initrectx = ((initwidth/2) * @canvas.width) - (@rectWidth/2)
-                initrecty = ((initheight/2) * @canvas.height) - (@rectHeight/2)
-                    
-                @context.beginPath()
-                @context.rect( (initialx1 * @canvas.width) + initrectx, 
-                initrecty,
-                @rectWidth,
-                @rectHeight)
-                @context.fillStyle = @rectFill
-                @context.strokeStyle = @rectStroke
-                @context.lineWidth = 1
-                @context.fill()
-                @context.stroke()
-                
-                linex1 = parseInt(initialx1 * @canvas.width) + 0.5
-                linex2 = linex1 + parseInt(initrectx)
-                linex3 = linex2 + parseInt(@rectWidth)
-                linex4 = parseInt(initialx2 * @canvas.width) + 0.5
-                liney = parseInt(initrecty + (@rectHeight/2)) + 0.5
-                @context.beginPath()
-                if d1 == d2
-                    @context.moveTo(linex1, liney)
-                    @context.lineTo(linex2, liney)
-                @context.moveTo(linex3, liney)
-                @context.lineTo(linex4, liney)
-                @context.strokeStyle = "#000000"
-                @context.lineWidth = 1
-                @context.stroke()
-                
-                @context.font = @textHeight + ' Verdana'
-                @context.textAlign = 'center'
-                @context.fillStyle = '#000000'
-                text = match.winner
-                #line 1
-                i = 0
-                j = 0
-                while @context.measureText(text.substring(0, i+1)).width < @rectWidth
-                    if text.substring(0, i) == text
-                        break;
-                    i++
-                
-                #line 2
-                if text.substring(0, i) != text
-                    j = i
-                    while @context.measureText(text.substring(i, j + 1)).width < @rectWidth
-                        if j >= text.length
-                            break;
-                        j++
-                
-                if j == 0
-                    @context.fillText(text.substring(0, i), 
-                    (initialx1 * @canvas.width) + initrectx + (@rectWidth/2), 
-                    initrecty + (@rectHeight/2) + (parseInt(@textHeight)/2) - 1)                  
-                else
-                    @context.fillText(text.substring(0, i),
-                    (initialx1 * @canvas.width) + initrectx + (@rectWidth/2),
-                    initrecty + (@rectHeight/2) - 3)
-                    @context.textAlign = 'left'
-                    @context.fillText(text.substring(i, j)
-                    (initialx1 * @canvas.width) + initrectx,
-                    initrecty + @rectHeight - 3)
-                
-                if d1 == d2
-                    if prevMatch1.is_slot()
-                        drawPlayerSlot(bracket, prevMatch1, initialx1 - (1/xDivisions), initialx1,
-                        0, 1, (1/xDivisions), (true))
-                    else
-                        drawMatch(bracket, prevMatch1, initialx1 - (1/xDivisions), initialx1, 
-                        0, 1, (1/xDivisions), (true), "middle")
-                    if prevMatch2.is_slot()
-                        drawPlayerSlot(bracket, prevMatch2, initialx2, initialx2 + (1/xDivisions),
-                        0, 1, (1/xDivisions), (false))
-                    else
-                        drawMatch(bracket, prevMatch2, initialx2, initialx2 + (1/xDivisions),
-                        0, 1, (1/xDivisions), (false), "middle")
-                else
-                    if prevMatch1.is_slot() and !prevMatch2.is_slot()
-                        @context.beginPath()
-                        liney = parseInt((((@rectHeight/@canvas.height) + (10/@canvas.height))/2) *
-                        @canvas.height) + 0.5
-                        @context.moveTo(initialx2 * @canvas.width, liney)
-                        @context.lineTo(initialx2 * @canvas.width, parseInt((1/2) * @canvas.height) + 0.5)
-                        @context.stroke()
-                        drawPlayerSlot(bracket, prevMatch1, initialx2, initialx2 + (1/xDivisions),
-                        0, (@rectHeight/@canvas.height) + (10/@canvas.height), false)
-                        drawMatch(bracket, prevMatch2, initialx2, initialx2 + (1/xDivisions),
-                        0, 1, (1/xDivisions), false, "middle")
-                    else if !prevMatch1.is_slot() and prevMatch2.is_slot()
-                        @context.beginPath()
-                        liney = parseInt((((@rectHeight/@canvas.height) + (10/@canvas.height))/2) *
-                        @canvas.height) + 0.5
-                        @context.moveTo(initialx2 * @canvas.width, liney)
-                        @context.lineTo(initialx2 * @canvas.width, parseInt((1/2) * @canvas.height) + 0.5)
-                        @context.stroke()
-                        drawMatch(bracket, prevMatch1, initialx2, initialx2 + (1/xDivisions),
-                        0, 1, (1/xDivisions), false, "middle")
-                        drawPlayerSlot(bracket, prevMatch2, initialx2, initialx2 + (1/xDivisions),
-                        0, (@rectHeight/@canvas.height) + (10/@canvas.height), false) 
-            
-            drawBracket(@bracket1)
-            console.log "redrawn"
+        @canvas.width = @canvas.width
+        if @currentDrawFunction != null
+            @currentDrawFunction()
+        console.log "redrawn"
         
 b = new BracketViewer

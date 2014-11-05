@@ -81,7 +81,7 @@ class BracketViewer
         $(mainDiv).bind 'drop', @drop
         
         $(window).resize @resize
-        $(@canvas).click @onclick
+        $(@canvas).on 'click', @onclick
         @resize()
             
     drawMatchPageFunc: (id, match) =>
@@ -96,7 +96,7 @@ class BracketViewer
             @tourneyData[id].visible = true
             @redraw()
        
-        previousScreenFunction = @currentDrawFunction
+        previousDrawFunction = @currentDrawFunction
         
         backBtn = new Button
         backBtn.pos.w = 60
@@ -106,7 +106,9 @@ class BracketViewer
         backBtn.text = "Back"
         backBtn.color = "#AAAAAA"
         backBtn.func = () =>
-            @currentDrawFunction = previousScreenFunction
+            @currentDrawFunction = previousDrawFunction
+            $(@canvas).off 'click'
+            $(@canvas).on 'click', @onclick
             @redraw()
         
         matchPageClick = (event) =>
@@ -116,8 +118,9 @@ class BracketViewer
             
             revealBtn.ifClick(x, y)
             backBtn.ifClick(x, y)
-                    
-        $(@canvas).click matchPageClick
+            
+        $(@canvas).off 'click'
+        $(@canvas).on 'click', matchPageClick
         
         drawFunc = () =>
             @context.beginPath() 
@@ -177,7 +180,7 @@ class BracketViewer
                 
                 @context.font = '30px Verdana'
                 @context.textAlign = 'center'
-                @context.fillStyle = '#FF0000'
+                @context.fillStyle = '#000000'
                 texty += 33
                 @context.fillText(match.winner, textx, texty)
             else
@@ -202,6 +205,8 @@ class BracketViewer
             
             
     drawBracketFunc: (bracket) =>
+        $(@canvas).off 'click'
+        $(@canvas).on 'click', @onclick
         drawFunc = () =>
             @drawBracket(bracket)
             

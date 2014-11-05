@@ -40,8 +40,25 @@ class Button
             @func()
             
     click: () ->
-        if @func != null
+        if @func != (null)
             @func()
+            
+    draw: (context) ->
+        context.beginPath() 
+        context.rect(@pos.x, @pos.y,
+        @pos.w, @pos.h)
+        context.fillStyle = @color
+        context.strokeStyle = "#000000"
+        context.fill()
+        context.stroke()
+        
+        context.font = '18px Verdana'
+        context.textAlign = 'left'
+        context.fillStyle = '#000000'
+        textWidth = context.measureText(@text).width
+        textx = @pos.x + (@pos.w/2) - (textWidth/2)
+        texty = @pos.y + (@pos.h/2) + 8
+        context.fillText(@text, textx, texty)  
         
 ###
  # Every Bracket has a list of matches and playerslots
@@ -65,7 +82,12 @@ class BracketViewer
         @rectHeight = 40
         @textHeight = "14px"
         @fileLoaded = (false)
-        @currentDrawFunction = null
+        @currentDrawFunction = (null)
+        
+        @brackButtons = []
+        @brackButtons.push new Button
+        @brackButtons.push new Button
+        @brackButtons.push new Button
         
         try
             @context = @canvas.getContext "2d"
@@ -93,7 +115,7 @@ class BracketViewer
         revealBtn.text = "Reveal"
         revealBtn.color = "#AAAAAA"
         revealBtn.func = () =>
-            @tourneyData[id].visible = true
+            @tourneyData[id].visible = (true)
             @redraw()
        
         previousDrawFunction = @currentDrawFunction
@@ -123,37 +145,8 @@ class BracketViewer
         $(@canvas).on 'click', matchPageClick
         
         drawFunc = () =>
-            @context.beginPath() 
-            @context.rect(backBtn.pos.x, backBtn.pos.y,
-            backBtn.pos.w, backBtn.pos.h)
-            @context.fillStyle = backBtn.color
-            @context.strokeStyle = "#000000"
-            @context.fill()
-            @context.stroke()
-            
-            @context.font = '18px Verdana'
-            @context.textAlign = 'left'
-            @context.fillStyle = '#000000'
-            textWidth = @context.measureText(backBtn.text).width
-            textx = backBtn.pos.x + (backBtn.pos.w/2) - (textWidth/2)
-            texty = backBtn.pos.y + (backBtn.pos.h/2) + 8
-            @context.fillText(backBtn.text, textx, texty)           
-            
-            @context.beginPath()
-            @context.rect(revealBtn.pos.x, revealBtn.pos.y,
-            revealBtn.pos.w, revealBtn.pos.h)
-            @context.fillStyle = revealBtn.color
-            @context.strokeStyle = "#000000"
-            @context.fill()
-            @context.stroke()
-            
-            @context.font = '18px Verdana'
-            @context.textAlign = 'left'
-            @context.fillStyle = '#000000'
-            textWidth = @context.measureText(revealBtn.text).width
-            textx = revealBtn.pos.x + (revealBtn.pos.w/2) - (textWidth/2)
-            texty = revealBtn.pos.y + (revealBtn.pos.h/2) + 8
-            @context.fillText(revealBtn.text, textx, texty)
+            backBtn.draw(@context)            
+            revealBtn.draw(@context)
             
             player1 = match.player_1
             player2 = match.player_2
@@ -223,6 +216,9 @@ class BracketViewer
                 y < match.click_field.y + match.click_field.h
                     @currentDrawFunction = @drawMatchPageFunc(id, match)
                     @redraw()
+            
+            for btn in @brackButtons
+                btn.ifClick x,y
                 
     drop: (event) =>
         console.log "wakka"
@@ -1038,8 +1034,49 @@ class BracketViewer
                 @drawMatch(bracket, prevMatch1, initialx2, initialx2 + (1/xDivisions),
                 0, 1, (1/xDivisions), false, "middle")
                 @drawPlayerSlot(bracket, prevMatch2, initialx2, initialx2 + (1/xDivisions),
-                0, (@rectHeight/@canvas.height) + (10/@canvas.height), false) 
-    
+                0, (@rectHeight/@canvas.height) + (10/@canvas.height), false)
+        @drawBracketSwitcher()
+
+    drawBracketSwitcher: () ->
+        w = (30)
+        h = (30)
+        x = (0.5 * @canvas.width) - (w/2)
+        y = (0.95 * @canvas.height) - (h/2)
+
+        @brackButtons[1].pos.w = w
+        @brackButtons[1].pos.h = h
+        @brackButtons[1].pos.x = x
+        @brackButtons[1].pos.y = y
+        @brackButtons[1].text = "2"
+        @brackButtons[1].color = "#FFFFFF"
+        @brackButtons[1].func = () =>
+            @currentDrawFunction = @drawBracketFunc(@bracket2)
+            @redraw()
+        
+        @brackButtons[0].pos.w = w
+        @brackButtons[0].pos.h = h
+        @brackButtons[0].pos.x = x - (w + 5)
+        @brackButtons[0].pos.y = y
+        @brackButtons[0].text = "1"
+        @brackButtons[0].color = "#FFFFFF"
+        @brackButtons[0].func = () =>
+            @currentDrawFunction = @drawBracketFunc(@bracket1)
+            @redraw()
+            
+        @brackButtons[2].pos.w = w
+        @brackButtons[2].pos.h = h
+        @brackButtons[2].pos.x = x + (w + 5)
+        @brackButtons[2].pos.y = y
+        @brackButtons[2].text = "3"
+        @brackButtons[2].color = "#FFFFFF"
+        @brackButtons[2].func = () =>
+            @currentDrawFunction = @drawBracketFunc(@bracket3)
+            @redraw()
+        
+        for btn in @brackButtons
+            btn.draw(@context) 
+        
+        
     depthRecurse : (bracket, depth, match) =>
         if match.is_slot()
             return depth + 1

@@ -206,7 +206,7 @@ class BracketViewer
                 @context.textAlign = 'center'
                 @context.fillStyle = '#000000'
                 textx = (0.5 * @canvas.width)
-                texty = (0.7 * @canvas.height)
+                texty = (0.3 * @canvas.height)
                 @context.fillText("Winner:", textx, texty)
 
                 @context.font = '30px Verdana'

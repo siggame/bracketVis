@@ -201,6 +201,11 @@ class BracketViewer
             @context.textAlign = 'right'
             @context.fillText(player2, textx, texty, maxWidth)
 
+            textx = (0.9 * @canvas.width)
+            texty = (0.1 * @canvas.height)
+            @context.textAlign = 'left'
+            @context.fillText(id, textx, texty, maxWidth)
+
             if match.isVisible()
                 @context.font = '30px Verdana'
                 @context.textAlign = 'center'
@@ -231,16 +236,17 @@ class BracketViewer
     onclick: (event) =>
         if @fileLoaded
             for id, match of @tourneyData
-                offset = $(@canvas).offset()
-                x = event.clientX - offset.left
-                y = event.clientY - offset.top
+                if !match.is_slot()
+                    offset = $(@canvas).offset()
+                    x = event.clientX - offset.left
+                    y = event.clientY - offset.top
 
-                if x > match.click_field.x and
-                x < match.click_field.x + match.click_field.w and
-                y > match.click_field.y and
-                y < match.click_field.y + match.click_field.h
-                    @currentDrawFunction = @drawMatchPageFunc(id, match)
-                    @redraw()
+                    if x > match.click_field.x and
+                    x < match.click_field.x + match.click_field.w and
+                    y > match.click_field.y and
+                    y < match.click_field.y + match.click_field.h
+                        @currentDrawFunction = @drawMatchPageFunc(id, match)
+                        @redraw()
 
             for btn in @brackButtons
                 btn.ifClick x,y
@@ -273,9 +279,7 @@ class BracketViewer
 
     createBrackets: () ->
         ###
-         # Add list of subsequent games to each match. Also add an
-         # attribute player_slots and add the number of PlayerSlot objects
-         # for each previous game.
+         # Add list of subsequent games to each match.
         ###
         for id, match of @tourneyData
             match.is_slot = () -> (false)
@@ -382,7 +386,7 @@ class BracketViewer
 
         ###
          # Then we fill out the rest of bracket two. Here you will insert all
-         # game that either have one winner from bracket2 and one loser from
+         # games that either have one winner from bracket2 and one loser from
          # bracket1 or two winners from bracket2. This needs to be run until
          # nothing is inserted because a check to see if a bracket2 game exists
          # may not have been inserted into bracket2 yet. Once no insertion has
@@ -442,7 +446,7 @@ class BracketViewer
          # grabbing any match in the object, (which is only possible via
          # a javascript for, in loop) I use the loop to grab the first match
          # in the bracket, iterate up the subsequent games within bracket 2,
-         # until I can't either subsequent matches in this bracket,
+         # until I can't find either subsequent matches in this bracket,
          # and that will be the top of tier 2.
         ###
         for id, match of @bracket2.matches
@@ -506,7 +510,7 @@ class BracketViewer
                     @bracket3.matches[id] = match
 
         ###
-         # The we find all the games that have a loser from bracket 2 and
+         # Then we find all the games that have a loser from bracket 2 and
          # a winner from bracket 3, and all games that have two winners
          # from brack 3.
         ###
@@ -514,7 +518,8 @@ class BracketViewer
         while insertionMade
             insertionMade = (false)
             for id, match of @tourneyData
-                if match.previous_matches.length > 0 and !@bracket3.matches[id]?
+                if (match.previous_matches.length > 0 and !@bracket3.matches[id]? and
+                match.previous_matches[0] != match.previous_matches[1])
                     prevMatch1id = match.previous_matches[0].toString()
                     prevMatch2id = match.previous_matches[1].toString()
                     prevMatch1 = @tourneyData[prevMatch1id]
@@ -679,7 +684,46 @@ class BracketViewer
                 prevMatch2 = @bracket1.matches[prevMatch2id]
 
                 if !prevMatch1.is_slot() and prevMatch2.is_slot()
-                    console.log "blah"
+                    match.previous_matches[0] = prevMatch2id
+                    match.previous_matches[1] = prevMatch1id
+
+        ###
+         # Do the same thing for the second bracket, pruning out games with
+         # buys.
+        ###
+        for id,match of @bracket2.matches
+            if match.player_1 == "bye" or match.player_2 == "bye"
+                w = if match.player_1 == "bye" then match.player_2 else match.player_1
+                @bracket2.matches[id] = new PlayerSlot(w)
+
+        for id,match of @bracket2.matches
+            if match.previous_matches? and match.previous_matches.length > 0
+                prevMatch1id = match.previous_matches[0].toString()
+                prevMatch2id = match.previous_matches[1].toString()
+                prevMatch1 = @bracket2.matches[prevMatch1id]
+                prevMatch2 = @bracket2.matches[prevMatch2id]
+
+                if !prevMatch1.is_slot() and prevMatch2.is_slot()
+                    match.previous_matches[0] = prevMatch2id
+                    match.previous_matches[1] = prevMatch1id
+
+        ###
+         # Do the same thing for the third bracket, pruning out games with
+         # buys
+        ###
+        for id,match of @bracket3.matches
+            if match.player_1 == "bye" or match.player_2 == "bye"
+                w = if match.player_1 == "bye" then match.player_2 else match.player_1
+                @bracket3.matches[id] = new PlayerSlot(w)
+
+        for id,match of @bracket3.matches
+            if match.previous_matches? and match.previous_matches.length > 0
+                prevMatch1id = match.previous_matches[0].toString()
+                prevMatch2id = match.previous_matches[1].toString()
+                prevMatch1 = @bracket3.matches[prevMatch1id]
+                prevMatch2 = @bracket3.matches[prevMatch2id]
+
+                if !prevMatch1.is_slot() and prevMatch2.is_slot()
                     match.previous_matches[0] = prevMatch2id
                     match.previous_matches[1] = prevMatch1id
 

@@ -17,6 +17,9 @@ class Bracket
         @lastmatch = (null)
         @matches = {}
 
+    isChampBracket: () ->
+        return false;
+
 class Rect
     constructor: () ->
         @x = 0
@@ -24,10 +27,261 @@ class Rect
         @w = 0
         @h = 0
 
+class ChampBracket
+    constructor: (@bracketViewer) ->
+        @lastmatch = (null)
+        @matches = {}
+        @tourneydata = null
+        @brack1 = null
+        @brack2 = null
+        @brack3 = null
+        @currentSeries = ""
+        @showMatchupb2b3 = false
+        @showChamp = false
+        @semiWinner
+        @champWinner
+
+        @newCoordx = ($(window).width() - 5)/1000
+        @newCoordy =($(window).height() - 5)/1000
+        @buttonWidth = @newCoordx * 100
+        @buttonHeight = @newCoordy * 80
+
+        @matchPageNext = new Button
+        @matchPageNext.pos.x = @newCoordx * 900 - @buttonWidth/2
+        @matchPageNext.pos.y = @newCoordy * 500 - @buttonHeight/2
+        @matchPageNext.pos.w = @buttonWidth
+        @matchPageNext.pos.h = @buttonHeight
+        @matchPageNext.text = "Next"
+        @matchPageNext.color = "#AAAAAA"
+        @matchPageNext.func = () =>
+            @currentMatchid = @currentMatch.subsequent_matches[0]
+            @currentMatch = @matches[@currentMatch.subsequent_matches[0]]
+            hide = true
+            subsequent_match = @matches[@currentMatch.subsequent_matches[0]]
+
+            if ((subsequent_match.player_1 == @currentMatch.player_1 or
+            subsequent_match.player_1 == @currentMatch.player_2) and
+            (subsequent_match.player_2 == @currentMatch.player_1 or
+            subsequent_match.player_2 == @currentMatch.player_2))
+                hide = false
+
+            drawMatchPage = @bracketViewer.drawMatchPageFunc @currentMatchid, @currentMatch,
+            (x, y) =>
+                @matchPagePrev.ifClick(x, y)
+                if(!hide)
+                    @matchPageNext.ifClick(x, y)
+            ,() =>
+                console.log("yo")
+                if(subsequent_match.log_location == "no game log")
+                    if(@currentSeries == "champ")
+                        @showChamp = true
+                        @champWinner = @currentMatch.winner
+                    else
+                        @showMatchupb2b3 = true
+                        @semiWinner = @currentMatch.winner
+                    hide = true
+
+            @bracketViewer.currentDrawFunction = (context) =>
+                drawMatchPage()
+                @matchPagePrev.draw(context)
+                if(!hide)
+                    @matchPageNext.draw(context)
+            @bracketViewer.redraw()
+
+        @matchPagePrev = new Button
+        @matchPagePrev.pos.x = @newCoordx * 100 - @buttonWidth/2
+        @matchPagePrev.pos.y = @newCoordy * 500 - @buttonHeight/2
+        @matchPagePrev.pos.w = @buttonWidth
+        @matchPagePrev.pos.h = @buttonHeight
+        @matchPagePrev.text = "Prev"
+        @matchPagePrev.color = "#AAAAAA"
+        @matchPagePrev.func = () =>
+            @currentMatchid = @currentMatch.previous_matches[0]
+            @currentMatch = @matches[@currentMatch.previous_matches[0]]
+            hide = false
+
+            if(@currentMatchid == parseInt(@champFirstMatchid) or @currentMatchid == parseInt(@semiFirstMatchid))
+                hide = true
+
+            drawMatchPage = @bracketViewer.drawMatchPageFunc @currentMatchid, @currentMatch, (x, y) =>
+                if(!hide)
+                    @matchPagePrev.ifClick(x, y)
+                @matchPageNext.ifClick(x, y)
+
+            @bracketViewer.currentDrawFunction = (context) =>
+                drawMatchPage()
+                if(!hide)
+                    @matchPagePrev.draw(context)
+                @matchPageNext.draw(context)
+            @bracketViewer.redraw();
+
+        @champMatchup = new Button
+        @champMatchup.pos.x = (@newCoordx * 500) - (@buttonWidth/2)
+        @champMatchup.pos.y = (@newCoordy * 200) - (@buttonHeight/2)
+        @champMatchup.pos.w = @buttonWidth
+        @champMatchup.pos.h = @buttonHeight
+        @champMatchup.text = ""
+        @champMatchup.color = "#AAAAAA"
+        @champMatchup.func = () =>
+            @currentSeries = "champ"
+            @currentMatchid = @champFirstMatchid
+            @currentMatch = @champFirstMatch
+            drawMatchPage = @bracketViewer.drawMatchPageFunc @champFirstMatchid, @champFirstMatch, (x, y) =>
+                @matchPageNext.ifClick(x, y)
+            @bracketViewer.currentDrawFunction = (context) =>
+                drawMatchPage()
+                @matchPageNext.draw(context)
+            @bracketViewer.redraw()
+
+        @b1Winner = new Button
+        @b1Winner.pos.x = (@newCoordx * 500) - (@buttonWidth/2) - (@buttonWidth * 2)
+        @b1Winner.pos.y = (@newCoordy * 400) - (@buttonHeight/2)
+        @b1Winner.pos.w = @buttonWidth
+        @b1Winner.pos.h = @buttonHeight
+        @b1Winner.text = ""
+        @b1Winner.color = "#AAAAAA"
+
+        @matchupb2b3 = new Button
+        @matchupb2b3.pos.x = (@newCoordx * 500) - (@buttonWidth/2) + (@buttonWidth * 2)
+        @matchupb2b3.pos.y = (@newCoordy * 400) - (@buttonHeight/2)
+        @matchupb2b3.pos.w = @buttonWidth
+        @matchupb2b3.pos.h = @buttonHeight
+        @matchupb2b3.color = "#AAAAAA"
+        @matchupb2b3.text = ""
+        @matchupb2b3.func = () =>
+            @currentSeries = "semi"
+            @currentMatchid = @semiFirstMatchid
+            @currentMatch = @semiFirstMatch
+            subsequent_match = @matches[@currentMatch.subsequent_matches[0]]
+            hide = false
+
+            drawMatchPage = @bracketViewer.drawMatchPageFunc @semiFirstMatchid, @semiFirstMatch,
+            (x, y) =>
+                if(!hide)
+                    @matchPageNext.ifClick(x, y)
+            , () =>
+                if(subsequent_match.log_location == "no game log")
+                    @semiWinner = @currentMatch.winner
+                    @showMatchupb2b3 = true
+                    hide = true
+
+            @bracketViewer.currentDrawFunction = (context) =>
+                drawMatchPage()
+                if(!hide)
+                    @matchPageNext.draw(context)
+            @bracketViewer.redraw()
+
+        @b2Winner = new Button;
+        @b2Winner.pos.x = (@newCoordx * 500) - (@buttonWidth/2)
+        @b2Winner.pos.y = (@newCoordy * 650) - (@buttonHeight/2)
+        @b2Winner.pos.w = @buttonWidth
+        @b2Winner.pos.h = @buttonHeight
+        @b2Winner.color = "#AAAAAA"
+        @b2Winner.text = ""
+
+        @b3Winner = new Button;
+        @b3Winner.pos.x = (@newCoordx * 500) - (@buttonWidth/2) + (@buttonWidth * 4)
+        @b3Winner.pos.y = (@newCoordy * 650) - (@buttonHeight/2)
+        @b3Winner.pos.w = @buttonWidth
+        @b3Winner.pos.h = @buttonHeight
+        @b3Winner.color = "#AAAAAA"
+        @b3Winner.text = ""
+
+    isChampBracket: () -> return true
+
+    onclick: (event) =>
+        offset = $(window).offset()
+        @champMatchup.ifClick(event.clientX, event.clientY)
+        @matchupb2b3.ifClick(event.clientX, event.clientY)
+
+        for btn in @bracketViewer.brackButtons
+            btn.ifClick event.clientX,event.clientY
+
+    processMatches: () ->
+        @brack1Winner = @brack1.matches[@brack1.lastmatch].winner
+        @brack2Winner = @brack2.matches[@brack2.lastmatch].winner
+        @brack3Winner = @brack3.matches[@brack3.lastmatch].winner
+        for id, match of @matches
+            if match.previous_matches[0] != match.previous_matches[1]
+                if match.player_1 == @brack1Winner or match.player_2 == @brack1Winner
+                    @champFirstMatchid = id
+                    @champFirstMatch = match
+                else
+                    @semiFirstMatchid = id
+                    @semiFirstMatch = match
+
+    draw: (context) ->
+        brack1LastMatch = @brack1.matches[@brack1.lastmatch].winner;
+        if(@brack1.matches[@brack1.lastmatch].isVisible())
+            @b1Winner.text = @brack1.matches[@brack1.lastmatch].winner;
+
+        if(@brack2.matches[@brack2.lastmatch].isVisible())
+            @b2Winner.text = @brack2.matches[@brack2.lastmatch].winner;
+
+        if(@brack3.matches[@brack3.lastmatch].isVisible())
+            @b3Winner.text = @brack3.matches[@brack3.lastmatch].winner;
+
+        if(@showMatchupb2b3)
+            @matchupb2b3.text = @semiWinner
+
+        if(@showChamp)
+            @champMatchup.text = @champWinner
+
+        @champMatchup.draw(context)
+        @matchupb2b3.draw(context)
+        @b1Winner.draw(context)
+        @b2Winner.draw(context)
+        @b3Winner.draw(context)
+
+        context.strokeStyle = "#000000"
+        context.lineWidth = 1
+
+        drawline = (x1, y1, x2, y2) =>
+            context.beginPath()
+            context.moveTo(x1, y1)
+            context.lineTo(x2, y2)
+            context.stroke()
+
+        # draw the lines
+        x = @b1Winner.pos.x + (@buttonWidth/2)
+        y1 = @b1Winner.pos.y
+        y2 = (@champMatchup.pos.y + @buttonHeight) + ((@b1Winner.pos.y - (@champMatchup.pos.y + @buttonHeight)) /2)
+        drawline(x, y1, x, y2)
+
+        x = @champMatchup.pos.x + (@buttonWidth/2)
+        y1 = @champMatchup.pos.y + @buttonHeight
+        drawline(x, y1, x, y2)
+
+        x = @matchupb2b3.pos.x + @buttonWidth/2
+        y1 = @matchupb2b3.pos.y
+        drawline(x, y1, x, y2)
+
+        x1 = @b1Winner.pos.x + @buttonWidth/2
+        x2 = @matchupb2b3.pos.x + @buttonWidth/2
+        drawline(x1, y2, x2, y2)
+
+        x = @b2Winner.pos.x + @buttonWidth/2
+        y1 = @b2Winner.pos.y
+        y2 = (@matchupb2b3.pos.y + @buttonHeight) + ((@b2Winner.pos.y - (@matchupb2b3.pos.y + @buttonHeight))/2)
+        drawline(x, y1, x, y2)
+
+        x = @matchupb2b3.pos.x + @buttonWidth/2
+        y1 = @matchupb2b3.pos.y + @buttonHeight
+        drawline(x, y1, x, y2)
+
+        x = @b3Winner.pos.x + @buttonWidth/2
+        y1 = @b3Winner.pos.y
+        drawline(x, y1, x, y2)
+
+        x1 = @b2Winner.pos.x + @buttonWidth/2
+        x2 = @b3Winner.pos.x + @buttonWidth/2
+        drawline(x1, y2, x2, y2)
+
 class Button
     constructor: () ->
         @pos = new Rect
         @text = "Reveal"
+        @textHeight = "14px"
         @color = "#000000"
         @func = null
 
@@ -53,12 +307,47 @@ class Button
         context.stroke()
 
         context.font = '18px Verdana'
+        context.textAlign = 'center'
+        context.textBaseline = 'middle'
+        context.fillStyle = '#000000'
+
+        i = 0
+        j = 0
+        while context.measureText(@text.substring(0, i+1)).width < @pos.w
+            if @text.substring(0, i) == @text
+                break;
+            i++
+
+        #line 2
+        if @text.substring(0, i) != @text
+            j = i
+            while context.measureText(@text.substring(i, j + 1)).width < @pos.w
+                if j >= @text.length
+                    break;
+                j++
+
+        if j == 0
+            context.fillText(@text.substring(0, i),
+            @pos.x + (@pos.w/2),
+            @pos.y + (@pos.h/2))
+        else
+            context.fillText(@text.substring(0, i),
+            @pos.x + (@pos.w/2),
+            @pos.y + (@pos.h/2) - 10)
+            context.textAlign = 'left'
+            context.fillText(@text.substring(i, j)
+            @pos.x,
+            @pos.y + (@pos.h/2) + 10)
+
+        ###
+        context.font = '18px Verdana'
         context.textAlign = 'left'
         context.fillStyle = '#000000'
         textWidth = context.measureText(@text).width
         textx = @pos.x + (@pos.w/2) - (textWidth/2)
         texty = @pos.y + (@pos.h/2) + 8
         context.fillText(@text, textx, texty)
+        ###
 
 ###
  # Every Bracket has a list of matches and playerslots
@@ -75,7 +364,10 @@ class BracketViewer
         @bracket1 = new Bracket
         @bracket2 = new Bracket
         @bracket3 = new Bracket
-        @champBracket = new Bracket
+        @champBracket = new ChampBracket(@)
+        @champBracket.brack1 = @bracket1
+        @champBracket.brack2 = @bracket2
+        @champBracket.brack3 = @bracket3
         @rectStroke = "#000000"
         @rectFill = "#AAAAAA"
         @rectWidth = 110
@@ -86,6 +378,7 @@ class BracketViewer
         @currentBracket = null
 
         @brackButtons = []
+        @brackButtons.push new Button
         @brackButtons.push new Button
         @brackButtons.push new Button
         @brackButtons.push new Button
@@ -107,7 +400,13 @@ class BracketViewer
         $(@canvas).on 'click', @onclick
         @resize()
 
-    drawMatchPageFunc: (id, match) =>
+    drawMatchPageFunc: (id, match, onclick, onreveal) =>
+        if typeof onclick == "undefined"
+            onclick = ()->
+
+        if typeof onreveal == "undefined"
+            onreveal = ()->
+
         revealBtn = new Button
         revealBtn.pos.w = 120
         revealBtn.pos.h = 60
@@ -141,6 +440,7 @@ class BracketViewer
                 revealPreviousMatches(prevMatch2id, prevMatch2)
 
             revealPreviousMatches(id, match)
+            onreveal()
             @redraw()
 
         previousBracket = @currentBracket
@@ -153,9 +453,15 @@ class BracketViewer
         backBtn.text = "Back"
         backBtn.color = "#AAAAAA"
         backBtn.func = () =>
-            @currentDrawFunction = @drawBracketFunc(previousBracket)
-            $(@canvas).off 'click'
-            $(@canvas).on 'click', @onclick
+            if(!previousBracket.isChampBracket())
+                @currentDrawFunction = @drawBracketFunc(previousBracket)
+                $(@canvas).off 'click'
+                $(@canvas).on 'click', @onclick
+            else
+                @currentDrawFunction = @drawChampBracket
+                $(@canvas).off 'click'
+                $(@canvas).on 'click', @champBracket.onclick
+
             @redraw()
 
         startGame = new Button
@@ -177,6 +483,7 @@ class BracketViewer
             revealBtn.ifClick(x, y)
             backBtn.ifClick(x, y)
             startGame.ifClick(x, y)
+            onclick(x, y)
 
         $(@canvas).off 'click'
         $(@canvas).on 'click', matchPageClick
@@ -278,6 +585,8 @@ class BracketViewer
         reader.readAsText file
 
     createBrackets: () ->
+        @champBracket.tourneydata = @tourneyData
+
         ###
          # Add list of subsequent games to each match.
         ###
@@ -559,6 +868,22 @@ class BracketViewer
                     (match.player_1 == prevMatch2.winner or
                     match.player_2 == prevMatch2.winner))
 
+                    # if one of the players is both a winner and loser from
+                    # both of the previous games, then this is an edge case,
+                    # where the loser from the last match in the second bracket
+                    # dropped into the third bracket and one and is facing
+                    # the winner of the second bracket in the championship
+                    # this game should be discarded from the third bracket
+                    if ((match.player_1 == prevMatch1.winner and
+                    match.player_1 == loser2) or
+                    (match.player_1 == prevMatch2.winner and
+                    match.player_1 == loser1)) or
+                    ((match.player_2 == prevMatch1.winner and
+                    match.player_2 == loser2) or
+                    (match.player_2 == prevMatch2.winner and
+                    match.player_2 == loser1))
+                        continue;
+
                     if matchHasLoserFromBrack2 and matchHasWinnerFromBrack3 or
                     matchHasTwoWinnersFromBrack3
                         insertionMade = (true)
@@ -618,6 +943,8 @@ class BracketViewer
             if match.subsequent_matches.length == 0
                 @champBracket.lastmatch = id
                 break
+
+        @champBracket.processMatches()
 
         ###
          # For all the matches that have previous games in other brackets,
@@ -1153,6 +1480,10 @@ class BracketViewer
 
         @drawBracketSwitcher()
 
+    drawChampBracket: () ->
+        @champBracket.draw(@context)
+        @drawBracketSwitcher()
+
     drawBracketSwitcher: () ->
         w = (30)
         h = (30)
@@ -1161,7 +1492,7 @@ class BracketViewer
 
         @brackButtons[1].pos.w = w
         @brackButtons[1].pos.h = h
-        @brackButtons[1].pos.x = x
+        @brackButtons[1].pos.x = x - (w/2 + 3)
         @brackButtons[1].pos.y = y
         @brackButtons[1].text = "2"
         @brackButtons[1].color = "#FFFFFF"
@@ -1172,7 +1503,7 @@ class BracketViewer
 
         @brackButtons[0].pos.w = w
         @brackButtons[0].pos.h = h
-        @brackButtons[0].pos.x = x - (w + 5)
+        @brackButtons[0].pos.x = x - ((3*w/2) + 8)
         @brackButtons[0].pos.y = y
         @brackButtons[0].text = "1"
         @brackButtons[0].color = "#FFFFFF"
@@ -1183,13 +1514,26 @@ class BracketViewer
 
         @brackButtons[2].pos.w = w
         @brackButtons[2].pos.h = h
-        @brackButtons[2].pos.x = x + (w + 5)
+        @brackButtons[2].pos.x = x + (w/2 + 3)
         @brackButtons[2].pos.y = y
         @brackButtons[2].text = "3"
         @brackButtons[2].color = "#FFFFFF"
         @brackButtons[2].func = () =>
             @currentDrawFunction = @drawBracketFunc(@bracket3)
             @currentBracket = @bracket3
+            @redraw()
+
+        @brackButtons[3].pos.w = w
+        @brackButtons[3].pos.h = h
+        @brackButtons[3].pos.x = x + ((3*w/2) + 8)
+        @brackButtons[3].pos.y = y
+        @brackButtons[3].text = "C"
+        @brackButtons[3].color = "#FFFFFF"
+        @brackButtons[3].func = () =>
+            @currentDrawFunction = @drawChampBracket
+            @currentBracket = @champBracket
+            $(@canvas).off 'click'
+            $(@canvas).on 'click', @champBracket.onclick
             @redraw()
 
         for btn in @brackButtons
@@ -1224,7 +1568,7 @@ class BracketViewer
     redraw: () =>
         @canvas.width = @canvas.width
         if @currentDrawFunction != (null)
-            @currentDrawFunction()
+            @currentDrawFunction(@context)
         console.log "redrawn"
 
 b = new BracketViewer
